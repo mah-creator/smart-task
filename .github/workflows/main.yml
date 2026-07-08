@@ -1,0 +1,66 @@
+name: 🚀 Deploy Laravel via FTP
+
+on:
+  push:
+    branches:
+      - main # Triggers deployment when pushing to the main branch
+  workflow_dispatch: # 👈 THIS ENABLES THE MANUAL RUN BUTTON
+
+jobs:
+  laravel-deploy:
+    name: 🎉 Prepare & Upload Laravel
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Fetch repository code
+      - name: 🚚 Get latest code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up PHP environment
+      - name: ⚙️ Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3' # Change to match your production PHP version
+          extensions: mbstring, xml, ctype, iconv, json, bcmath, zip
+
+      # Step 3: Install Backend Dependencies (Composer)
+      - name: 📦 Install Composer Dependencies
+        run: |
+          composer install --no-ansi --no-dev --no-interaction --no-plugins --no-progress --no-scripts --optimize-autoloader
+
+      # Step 4: Set up Node.js for frontend assets
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Step 5: Compile Frontend Assets (Vite / Mix)
+      - name: 🔨 Build Assets
+        run: |
+          npm install
+          npm run build
+
+      # Step 6: Create production .env file to cache config inside the container
+      - name: 📝 Prepare Environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      # Step 7: Clear and optimize Laravel caches
+      - name: ⚡ Optimize Laravel
+        run: |
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+      # Step 8: Sync files to your hosting server via FTP
+      - name: 📂 Sync files to server
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftp
+          local-dir: ./
+          server-dir: / # Change to your hosting path (e.g., /public_html/ or /var/www/)
