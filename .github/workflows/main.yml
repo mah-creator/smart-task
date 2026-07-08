@@ -29,11 +29,11 @@ jobs:
           composer install --no-ansi --no-dev --no-interaction --no-plugins --no-progress --no-scripts --optimize-autoloader
 
       # Step 4: Set up Node.js for frontend assets
-      #- name: ⚙️ Setup Node.js
-      #  uses: actions/setup-node@v4
-      #  with:
-      #    node-version: '20'
-      #    cache: 'npm'
+      - name: ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
       # Step 5: Compile Frontend Assets (Vite / Mix)
       - name: 🔨 Build Assets
