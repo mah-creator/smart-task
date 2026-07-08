@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Folder;
 use App\Models\Task;
+use Illuminate\Http\Request;
 
 class TaskController extends Controller
 {
@@ -12,9 +13,11 @@ class TaskController extends Controller
      */
     public function index()
     {
-        $tasks = Task::all();
-        $tasks_count = $tasks->where('is_completed', false)->count();
-        return view('tasks.index', compact('tasks', 'tasks_count'));
+        $folders = Folder::with('tasks')->get();
+        $unassignedTasks = Task::whereNull('folder_id')->get();
+        $tasks_count = Task::where('is_completed', false)->count();
+
+        return view('tasks.index', compact('folders', 'unassignedTasks', 'tasks_count'));
     }
 
     /**
@@ -22,7 +25,9 @@ class TaskController extends Controller
      */
     public function create()
     {
-        return view('tasks.create');
+        $folders = Folder::all();
+
+        return view('tasks.create', compact('folders'));
     }
 
     /**
@@ -32,6 +37,7 @@ class TaskController extends Controller
     {
         $request->merge(['user_id' => '1']); // Temporary user ID for testing
         Task::create($request->all());
+
         return redirect()->route('tasks.index');
     }
 
@@ -49,7 +55,9 @@ class TaskController extends Controller
     public function edit(string $id)
     {
         $task = Task::findOrFail($id);
-        return view('tasks.edit', compact('task'));
+        $folders = Folder::all();
+
+        return view('tasks.edit', compact('task', 'folders'));
     }
 
     /**
@@ -59,6 +67,7 @@ class TaskController extends Controller
     {
         $task = Task::findOrFail($id);
         $task->update($request->all());
+
         return redirect()->route('tasks.index');
     }
 
@@ -78,13 +87,13 @@ class TaskController extends Controller
     public function toggle(Request $request, $id)
     {
         $task = Task::findOrFail($id);
-        $task->is_completed = !$task->is_completed;
+        $task->is_completed = ! $task->is_completed;
         $task->save();
 
         return response()->json([
             'success' => true,
             'is_completed' => $task->is_completed,
-            'message' => 'Task toggled successfully'
+            'message' => 'Task toggled successfully',
         ]);
     }
 
@@ -96,7 +105,7 @@ class TaskController extends Controller
         if (request()->ajax()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Task deleted successfully'
+                'message' => 'Task deleted successfully',
             ]);
         }
 

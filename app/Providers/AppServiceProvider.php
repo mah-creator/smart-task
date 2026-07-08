@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Laravel\Fortify\Contracts\LogoutResponse;
 
 class AppServiceProvider extends ServiceProvider
 {

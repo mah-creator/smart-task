@@ -12,8 +12,14 @@ class Task extends Model
         'description',
         'due_date',
         'priority',
-        'folder',
+        'folder_id',
+        'is_completed',
     ];
+
+    public function folder()
+    {
+        return $this->belongsTo(Folder::class);
+    }
 
     protected $casts = [
         'due_date' => 'datetime',

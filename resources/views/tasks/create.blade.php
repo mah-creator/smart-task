@@ -240,11 +240,11 @@
                         <span class="material-symbols-outlined text-primary text-[20px]" data-icon="folder">folder</span>
                         <label class="font-label-caps text-label-caps text-on-surface-variant">Folder</label>
                     </div>
-                    <select name="folder" class="w-full bg-surface-container-low border-none rounded-lg px-4 py-2 text-body-sm focus:ring-2 focus:ring-primary/20 transition-all">
-                        <option>Personal</option>
-                        <option>Work</option>
-                        <option>Health</option>
-                        <option>Finance</option>
+                    <select name="folder_id" class="w-full bg-surface-container-low border-none rounded-lg px-4 py-2 text-body-sm focus:ring-2 focus:ring-primary/20 transition-all">
+                        <option value="">No Folder</option>
+                        @foreach($folders as $folder)
+                            <option value="{{ $folder->id }}">{{ $folder->name }}</option>
+                        @endforeach
                     </select>
                 </div>
             </div>

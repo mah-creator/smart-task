@@ -1,4 +1,5 @@
-<x-layout body-wrapper="bg-background text-on-background min-h-screen pb-32" main-wrapper="max-w-content mx-auto px-margin-mobile mt-8 space-y-12">
+<x-layout body-wrapper="bg-background text-on-background min-h-screen pb-32"
+    main-wrapper="max-w-content mx-auto px-margin-mobile mt-8 space-y-12">
     <x-slot:style>
         <style>
             .material-symbols-outlined {
@@ -28,68 +29,36 @@
                 <span id="tasks-count">{{ $tasks_count }}</span><span> Remaining</span>
             </div>
         </div>
-        <div class="grid grid-cols-1 gap-base">
-            @foreach ($tasks as $task)
-            <!-- Task Card -->
-            <div class="group bg-surface-container-lowest custom-shadow rounded-xl p-4 min-h-[56px] flex items-center gap-4 border border-outline-variant hover:shadow-lg transition-all duration-300"
-                id="task-card-{{ $task->id }}"
-                style="opacity: {{ $task->is_completed ? '0.7' : '1' }}; transform: {{ $task->is_completed ? 'scale(0.98)' : 'scale(1)' }}; transition: 0.4s ease-out;">
-
-                <!-- Hidden form for AJAX -->
-                <form id="toggle-task-{{ $task->id }}" action="{{ route('tasks.toggle', ['task' => $task->id]) }}" method="post" style="display: none;">
-                    @csrf
-                </form>
-
-                <button
-                    onclick="toggleTask({{ $task->id }})"
-                    class="w-6 h-6 rounded-full border-2 border-primary-container flex items-center justify-center transition-colors hover:bg-primary-fixed {{ $task->is_completed ? 'bg-primary-container' : '' }}"
-                    style="border-color: {{ $task->is_completed ? 'transparent' : '' }}">
-                    <span class="material-symbols-outlined text-[16px] text-primary {{ $task->is_completed ? '' : 'hidden' }}" data-icon="check" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check</span>
-                </button>
-                <div class="flex-1">
-                    <p class="font-body-lg text-body-lg text-on-surface {{ $task->is_completed ? 'task-checked' : '' }}">
-                        {{ $task->title }}
-                    </p>
-                    <p class="text-xs text-gray-500">{{ $task->due_date?->format('M d, Y') }}</p>
-                </div>
-                <div class="flex items-center gap-2 relative">
-
-                    @switch($task->priority)
-                    @case('low')
-                    <span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-caps text-[10px]">Low</span>
-                    @break
-                    @case('medium')
-                    <span class="px-2 py-0.5 rounded-full bg-primary-container text-on-primary-container font-label-caps text-[10px]">Normal</span>
-                    @break
-                    @case('high')
-                    <span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label-caps text-[10px]">High</span>
-                    @break
-                    @endswitch
-
-                    <button class="task-menu-trigger p-1 hover:bg-surface-container-high rounded-full transition-colors active:scale-90">
-                        <span class="material-symbols-outlined text-on-surface-variant pointer-events-none" data-icon="more_vert">more_vert</span>
-                    </button>
-                    <div class="task-dropdown hidden absolute right-0 top-full mt-2 w-32 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-xl z-30 overflow-visible transform opacity-0 scale-95 transition-all duration-200 origin-top-right">
-                        <div class="flex flex-col py-1">
-                            <a href="{{ route('tasks.edit', ['task' => $task->id]) }}" class="flex items-center gap-2 px-3 py-2 hover:bg-surface-container transition-colors text-left">
-                                <span class="material-symbols-outlined text-sm" data-icon="edit">edit</span>
-                                <span class="font-label-caps text-label-caps">Edit</span>
-                            </a>
-                            <button
-                                onclick="document.getElementById('delete-task-form-{{ $task->id }}').submit()"
-                                class="flex items-center gap-2 px-3 py-2 hover:bg-error-container text-error transition-colors text-left">
-                                <span class="material-symbols-outlined text-sm" data-icon="delete">delete</span>
-                                <span class="font-label-caps text-label-caps text-error">Delete</span>
-                            </button>
-                            <form id="delete-task-form-{{ $task->id }}" action="{{ route('tasks.destroy', ['task' => $task->id]) }}" method="post" style="display: none;">
-                                @csrf
-                                @method('DELETE')
-                            </form>
+        <div id="tasks-grid-container" class="space-y-8">
+            @foreach($folders as $folder)
+                @if($folder->tasks->count() > 0)
+                    <div class="folder-group">
+                        <h4 class="font-label-caps text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 px-2">
+                            <span class="w-3 h-3 rounded-full" style="background-color: {{ $folder->color }}"></span>
+                            {{ $folder->name }}
+                        </h4>
+                        <div class="grid grid-cols-1 gap-base">
+                            @foreach($folder->tasks as $task)
+                                <x-task-card :task="$task" />
+                            @endforeach
                         </div>
                     </div>
-                </div>
-            </div>
+                @endif
             @endforeach
+
+            @if($unassignedTasks->count() > 0)
+                <div class="folder-group">
+                    <h4 class="font-label-caps text-label-caps text-on-surface-variant mb-4 flex items-center gap-2 px-2">
+                        <span class="w-3 h-3 rounded-full bg-outline"></span>
+                        Unassigned Tasks
+                    </h4>
+                    <div class="grid grid-cols-1 gap-base">
+                        @foreach($unassignedTasks as $task)
+                            <x-task-card :task="$task" />
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         </div>
     </section>
     <!-- Upcoming Section (Asymmetric / Glass-ish) -->
@@ -136,28 +105,91 @@
             </div>
         </section> -->
     <!-- FAB -->
-    <a href="{{ route('tasks.create') }}" class="fixed bottom-24 right-6 md:right-12 w-14 h-14 rounded-full bg-primary-container text-on-primary-container shadow-xl flex items-center justify-center active:scale-90 transition-all z-50">
+    <a href="{{ route('tasks.create') }}"
+        class="fixed bottom-24 right-6 md:right-12 w-14 h-14 rounded-full bg-primary-container text-on-primary-container shadow-xl flex items-center justify-center active:scale-90 transition-all z-50">
         <span class="material-symbols-outlined text-[32px]" data-icon="add">add</span>
     </a>
     <!-- BottomNavBar -->
-    <nav class="fixed bottom-0 left-0 w-full flex justify-around items-center py-2 px-margin-mobile bg-surface dark:bg-surface-dim z-50 md:hidden shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
-        <a class="flex flex-col items-center justify-center bg-primary-container dark:bg-primary-fixed-dim text-on-primary-container dark:text-on-primary-fixed-variant rounded-full px-4 py-1 active:scale-90 transition-all duration-200" href="#">
+    <nav
+        class="fixed bottom-0 left-0 w-full flex justify-around items-center py-2 px-margin-mobile bg-surface dark:bg-surface-dim z-50 md:hidden shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+        <a class="flex flex-col items-center justify-center bg-primary-container dark:bg-primary-fixed-dim text-on-primary-container dark:text-on-primary-fixed-variant rounded-full px-4 py-1 active:scale-90 transition-all duration-200"
+            href="#">
             <span class="material-symbols-outlined" data-icon="list_alt">list_alt</span>
             <span class="font-label-caps text-label-caps">Tasks</span>
         </a>
-        <a class="flex flex-col items-center justify-center text-on-secondary-container dark:text-on-secondary-fixed-variant px-4 py-1 hover:text-primary active:scale-90 transition-all duration-200" href="#">
+        <a class="flex flex-col items-center justify-center text-on-secondary-container dark:text-on-secondary-fixed-variant px-4 py-1 hover:text-primary active:scale-90 transition-all duration-200"
+            href="#">
             <span class="material-symbols-outlined" data-icon="timer">timer</span>
             <span class="font-label-caps text-label-caps">Focus</span>
         </a>
-        <a class="flex flex-col items-center justify-center text-on-secondary-container dark:text-on-secondary-fixed-variant px-4 py-1 hover:text-primary active:scale-90 transition-all duration-200" href="#">
+        <a class="flex flex-col items-center justify-center text-on-secondary-container dark:text-on-secondary-fixed-variant px-4 py-1 hover:text-primary active:scale-90 transition-all duration-200"
+            href="{{ route('folders.index') }}">
             <span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
             <span class="font-label-caps text-label-caps">Folders</span>
         </a>
-        <a class="flex flex-col items-center justify-center text-on-secondary-container dark:text-on-secondary-fixed-variant px-4 py-1 hover:text-primary active:scale-90 transition-all duration-200" href="#">
+        <a class="flex flex-col items-center justify-center text-on-secondary-container dark:text-on-secondary-fixed-variant px-4 py-1 hover:text-primary active:scale-90 transition-all duration-200"
+            href="#">
             <span class="material-symbols-outlined" data-icon="settings">settings</span>
             <span class="font-label-caps text-label-caps">Settings</span>
         </a>
     </nav>
+
+    <!-- Chatbot FAB -->
+    <button id="chatbot-fab"
+        class="fixed bottom-6 right-6 md:right-12 w-14 h-14 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-[0_8px_16px_rgba(79,70,229,0.3)] flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-300 z-[60] group">
+        <span class="material-symbols-outlined text-[28px] group-hover:rotate-12 transition-transform">smart_toy</span>
+    </button>
+
+    <!-- Chatbot Window -->
+    <div id="chatbot-window"
+        class="fixed bottom-24 right-6 md:right-12 w-[350px] sm:w-[400px] h-[500px] max-h-[80vh] bg-surface-container-lowest/80 backdrop-blur-2xl border border-white/20 dark:border-white/5 rounded-2xl shadow-2xl z-[60] flex flex-col opacity-0 scale-95 pointer-events-none transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] origin-bottom-right overflow-hidden custom-shadow">
+        <!-- Header -->
+        <div
+            class="p-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white flex items-center justify-between shadow-sm z-10">
+            <div class="flex items-center gap-3">
+                <div
+                    class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md shadow-inner">
+                    <span class="material-symbols-outlined text-[20px]">smart_toy</span>
+                </div>
+                <div>
+                    <h3 class="font-headline-sm tracking-wide text-sm font-bold">AI Product Manager</h3>
+                    <p class="text-[10px] text-indigo-100 opacity-90 flex items-center gap-1"><span
+                            class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span> Online</p>
+                </div>
+            </div>
+            <button id="chatbot-close"
+                class="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center transition-colors active:scale-90">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+        </div>
+
+        <!-- Messages Area -->
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-transparent relative scroll-smooth pb-4">
+            <!-- Initial Message -->
+            <div class="flex items-start gap-2 max-w-[85%]">
+                <div
+                    class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-200">
+                    <span class="material-symbols-outlined text-[16px]">smart_toy</span>
+                </div>
+                <div
+                    class="bg-surface-container shadow-sm p-3 rounded-2xl rounded-tl-sm text-sm text-on-surface font-body-sm leading-relaxed border border-outline-variant/30">
+                    Hi! I'm your AI Product Manager. Describe a feature or idea, and I'll break it down into actionable
+                    tasks for you.
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div
+            class="p-3 bg-surface/50 backdrop-blur-md border-t border-outline-variant/50 flex items-center gap-2 relative z-10">
+            <input type="text" id="chat-input" placeholder="E.g. Build an auth system..."
+                class="flex-1 bg-surface-container-highest/50 border border-outline-variant/50 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-full px-4 py-2.5 text-sm text-on-surface outline-none transition-all placeholder:text-on-surface-variant shadow-inner">
+            <button id="chat-submit"
+                class="w-10 h-10 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white flex items-center justify-center hover:from-purple-500 hover:to-indigo-500 active:scale-90 transition-all shadow-md shadow-indigo-500/30 shrink-0">
+                <span class="material-symbols-outlined text-[18px] ml-0.5">send</span>
+            </button>
+        </div>
+    </div>
 
     <x-slot:script>
         <script>
@@ -178,18 +210,18 @@
 
                 // Make AJAX request
                 fetch(form.action, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrfToken,
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'Accept': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            _token: csrfToken,
-                            is_completed: Boolean
-                        })
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        _token: csrfToken,
+                        is_completed: Boolean
                     })
+                })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
@@ -239,18 +271,18 @@
                     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
                     fetch(form.action, {
-                            method: 'DELETE',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': csrfToken,
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'Accept': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                _token: csrfToken,
-                                _method: 'DELETE'
-                            })
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            _token: csrfToken,
+                            _method: 'DELETE'
                         })
+                    })
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
@@ -350,5 +382,171 @@
                 }
             });
         </script>
+
+        <script>
+            // Chatbot Functionality
+            document.addEventListener('DOMContentLoaded', () => {
+                const fab = document.getElementById('chatbot-fab');
+                const chatWindow = document.getElementById('chatbot-window');
+                const closeBtn = document.getElementById('chatbot-close');
+                const input = document.getElementById('chat-input');
+                const submitBtn = document.getElementById('chat-submit');
+                const messagesContainer = document.getElementById('chat-messages');
+                let isChatOpen = false;
+
+                // Toggle Chat Window
+                function toggleChat() {
+                    isChatOpen = !isChatOpen;
+                    if (isChatOpen) {
+                        chatWindow.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+                        chatWindow.classList.add('opacity-100', 'scale-100', 'pointer-events-auto');
+                        fab.classList.add('scale-0'); // Hide FAB gracefully
+                        setTimeout(() => input.focus(), 300);
+                    } else {
+                        chatWindow.classList.remove('opacity-100', 'scale-100', 'pointer-events-auto');
+                        chatWindow.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                        fab.classList.remove('scale-0');
+                    }
+                }
+
+                fab.addEventListener('click', toggleChat);
+                closeBtn.addEventListener('click', toggleChat);
+
+                // Add Message to UI
+                function appendMessage(text, sender) {
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = `flex items-end gap-2 max-w-[85%] ${sender === 'user' ? 'ml-auto flex-row-reverse' : ''} animate-[fade-in_0.3s_ease-out_forwards]`;
+
+                    let avatar = '';
+                    if (sender === 'bot') {
+                        avatar = `
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-200">
+                            <span class="material-symbols-outlined text-[16px]">smart_toy</span>
+                        </div>`;
+                    }
+
+                    const bubbleColor = sender === 'user'
+                        ? 'bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-tr-sm'
+                        : 'bg-surface-container shadow-sm text-on-surface rounded-tl-sm border border-outline-variant/30';
+
+                    msgDiv.innerHTML = `
+                        ${avatar}
+                        <div class="p-3 rounded-2xl ${bubbleColor} text-sm font-body-sm leading-relaxed" style="white-space: pre-wrap;">${text}</div>
+                    `;
+
+                    messagesContainer.appendChild(msgDiv);
+                    messagesContainer.scrollTo({ top: messagesContainer.scrollHeight, behavior: 'smooth' });
+                }
+
+                function appendTypingIndicator() {
+                    const id = 'typing-' + Date.now();
+                    const msgDiv = document.createElement('div');
+                    msgDiv.id = id;
+                    msgDiv.className = `flex items-end gap-2 max-w-[85%] animate-[fade-in_0.3s_ease-out_forwards]`;
+
+                    msgDiv.innerHTML = `
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 flex-shrink-0 flex items-center justify-center text-indigo-600 shadow-sm border border-indigo-200">
+                            <span class="material-symbols-outlined text-[16px] animate-pulse">smart_toy</span>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-surface-container rounded-tl-sm border border-outline-variant/30 flex items-center gap-1.5 h-[42px]">
+                            <div class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></div>
+                            <div class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                            <div class="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                        </div>
+                    `;
+                    messagesContainer.appendChild(msgDiv);
+                    messagesContainer.scrollTo({ top: messagesContainer.scrollHeight, behavior: 'smooth' });
+                    return id;
+                }
+
+                // Handle sending
+                function sendMessage() {
+                    const text = input.value.trim();
+                    if (!text) return;
+
+                    input.value = '';
+                    appendMessage(text, 'user');
+                    const typingId = appendTypingIndicator();
+
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
+                    fetch('/chat/message', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ message: text })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            document.getElementById(typingId)?.remove();
+                            if (data.success) {
+                                appendMessage(data.message, 'bot');
+
+                                // Dynamically refresh the tasks grid without a full page reload
+                                fetch(window.location.href)
+                                    .then(res => res.text())
+                                    .then(html => {
+                                        const parser = new DOMParser();
+                                        const doc = parser.parseFromString(html, 'text/html');
+
+                                        const currentTasksGrid = document.getElementById('tasks-grid-container');
+                                        const newTasksGrid = doc.getElementById('tasks-grid-container');
+
+                                        if (currentTasksGrid && newTasksGrid) {
+                                            currentTasksGrid.innerHTML = newTasksGrid.innerHTML;
+
+                                            // Animate newly inserted cards
+                                            const cards = currentTasksGrid.querySelectorAll('.group');
+                                            cards.forEach((card, index) => {
+                                                card.style.opacity = '0';
+                                                card.style.transform = 'translateY(10px)';
+                                                setTimeout(() => {
+                                                    card.style.transition = 'all 0.4s ease-out';
+                                                    card.style.opacity = card.classList.contains('task-checked') ? '0.7' : '1';
+                                                    card.style.transform = card.classList.contains('task-checked') ? 'scale(0.98)' : 'translateY(0)';
+                                                }, index * 100);
+                                            });
+                                        }
+
+                                        // Update task count
+                                        const currentCount = document.getElementById('tasks-count');
+                                        const newCount = doc.getElementById('tasks-count');
+                                        if (currentCount && newCount) {
+                                            currentCount.textContent = newCount.textContent;
+                                        }
+                                    });
+                            } else {
+                                appendMessage("Sorry, I encountered an error.", 'bot');
+                            }
+                        })
+                        .catch(err => {
+                            document.getElementById(typingId)?.remove();
+                            appendMessage("Sorry, I couldn't reach the server.", 'bot');
+                            console.error(err);
+                        });
+                }
+
+                submitBtn.addEventListener('click', sendMessage);
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') sendMessage();
+                });
+            });
+        </script>
+        <style>
+            @keyframes fade-in {
+                from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        </style>
     </x-slot:script>
 </x-layout>
